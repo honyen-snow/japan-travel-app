@@ -6,7 +6,8 @@ from PIL import Image
 st.set_page_config(page_title="Honyen 的日本導遊", layout="wide")
 
 # 2. 設定 API Key
-genai.configure(api_key="AIzaSyAShdl2lc8v7P8v1MfqYBcLnzovp3Sdi2Q")
+# 這是安全寫法，去保險箱拿鑰匙
+genai.configure(api_key=st.secrets["GOOGLE_API_KEY"])
 
 # 3. 定義導遊大腦 (包含 Google 搜尋與導航功能)
 sys_prompt = """
