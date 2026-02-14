@@ -11,10 +11,10 @@ if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
 if not st.session_state.authenticated:
-    st.title("🔒 日本 AI 導遊")
+    st.title("🔒 日之旅 AI 導遊")
     password = st.text_input("請輸入通關密碼：", type="password")
     if st.button("登入"):
-        # 你的密碼 (建議使用 Secrets 管理，這邊範例寫死方便你測試)
+        # 你的密碼
         if password == "japan2026": 
             st.session_state.authenticated = True
             st.rerun()
@@ -28,8 +28,7 @@ if "GOOGLE_API_KEY" in st.secrets:
 else:
     st.error("找不到 API Key")
 
-# 建議使用目前最強的 1.5 Flash (因為你有付費專案了，這個額度最多最穩)
-# 或是 gemini-2.0-flash-lite-preview-02-05
+# 使用 1.5 Flash (目前額度最穩) 或 2.5-flash
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- 3. 定義全日本資料庫 ---
@@ -103,9 +102,9 @@ with st.sidebar:
 # --- 主畫面 ---
 st.title(f"🎌 AI 日之旅導遊 - {selected_city}篇")
 
-tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 匯率換算"])
+tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 敗家計算機"])
 
-# === 分頁 1: AI 導遊 (維持原樣) ===
+# === 分頁 1: AI 導遊 (腦袋升級，找回地圖) ===
 with tab1:
     with st.expander("📸 上傳照片問問題"):
         uploaded_file = st.file_uploader("請選擇照片...", type=["jpg", "jpeg", "png"])
@@ -121,10 +120,14 @@ with tab1:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # 【重要修正】把「導航請提供 Google Maps 連結」這句話加回來了！
     sys_prompt = f"""
     你是一位精通日本全境旅遊的台灣導遊 Honyen。
     目前使用者正在「{selected_city}」旅遊。
-    請優先提供該城市的旅遊資訊。
+    1. 用繁體中文回答，語氣熱情。
+    2. 遇到專有名詞請標註日文。
+    3. 導航請務必提供 Google Maps 連結，方便使用者點擊。
+    4. 搜尋請提供 Google Search 連結。
     """
 
     if user_input := st.chat_input("請輸入問題..."):
@@ -145,22 +148,20 @@ with tab1:
                 except Exception as e:
                     st.error(f"發生錯誤：{e}")
 
-# === 分頁 2: 翻譯蒟蒻 (大幅改良 UX) ===
+# === 分頁 2: 翻譯蒟蒻 (移除清除按鈕，保留切換清空) ===
 with tab2:
     st.header("🗣️ 雙向溝通板")
     
-    # 初始化翻譯歷史 (解決: 切換頁面或亂點後翻譯結果消失的問題)
     if "trans_history" not in st.session_state:
         st.session_state.trans_history = ""
-    # 初始化輸入框文字
     if "trans_input_text" not in st.session_state:
         st.session_state.trans_input_text = ""
 
-    # 定義一個清除函數：當切換模式時，把輸入框清空
+    # 清空函數
     def clear_text():
         st.session_state.trans_input_text = ""
 
-    # 選擇模式 (加入 on_change，切換時自動清空輸入框)
+    # 選擇模式 (切換時自動清空)
     trans_mode = st.radio(
         "模式", 
         ["中翻日 (我問店員)", "日翻中 (店員說什麼)"], 
@@ -168,52 +169,43 @@ with tab2:
         on_change=clear_text
     )
 
-    col_t1, col_t2 = st.columns([4, 1])
-    with col_t1:
-        # 綁定 key 到 session_state，這樣我們才能用程式控制它
-        trans_input = st.text_area("輸入文字：", height=100, key="trans_input_text")
-    with col_t2:
-        st.write("") # 排版用
-        st.write("") 
-        # 加入一個手動清除按鈕
-        if st.button("🗑️ 清除", use_container_width=True):
-            clear_text()
-            st.rerun()
+    # 輸入框 (移除了右邊的清除按鈕，改為全寬)
+    trans_input = st.text_area("輸入文字：", height=100, key="trans_input_text")
 
     if st.button("✨ 翻譯", use_container_width=True, type="primary"):
         if trans_input:
             with st.spinner("翻譯中..."):
                 if "中翻日" in trans_mode:
                     res = model.generate_content(f"把這句中文翻成禮貌日文，附羅馬拼音：{trans_input}")
-                    st.session_state.trans_history = res.text # 存起來
+                    st.session_state.trans_history = res.text 
                 else:
                     res = model.generate_content(f"把這句日文翻成繁體中文：{trans_input}")
-                    st.session_state.trans_history = res.text # 存起來
+                    st.session_state.trans_history = res.text 
     
-    # 顯示結果 (即使點別的地方，因為是讀取 session_state，所以不會消失)
+    # 顯示結果
     if st.session_state.trans_history:
         st.info(st.session_state.trans_history)
 
 
-# === 分頁 3: 敗家計算機 (加入 X 清除鍵) ===
+# === 分頁 3: 敗家計算機 (修正歸零報錯問題) ===
 with tab3:
     st.header("💰 匯率換算")
     
-    # 初始化價格 (解決: 數字很難刪除的問題)
     if "price_input" not in st.session_state:
         st.session_state.price_input = 0.0
 
-    # 匯率設定 (這個保留 +- 號很好用)
+    # 定義歸零的回調函數 (解決報錯的關鍵！)
+    def reset_price():
+        st.session_state.price_input = 0.0
+
     col_rate1, col_rate2 = st.columns([3, 1])
     with col_rate1:
         rate = st.number_input("目前匯率 (可手動調整)", value=0.22, format="%.3f", step=0.001)
 
     st.divider()
 
-    # 價格輸入區 (改良版)
     col_p1, col_p2 = st.columns([4, 1]) 
     with col_p1:
-        # 綁定 session_state 的值
         jpy = st.number_input(
             "日幣金額 (¥)", 
             min_value=0.0, 
@@ -221,18 +213,14 @@ with tab3:
             key="price_input"
         )
     with col_p2:
-        st.write("") # 排版空格
         st.write("") 
-        # 這就是你想要的「X」按鈕
-        if st.button("❌ 歸零"):
-            st.session_state.price_input = 0.0 # 設定狀態為 0
-            st.rerun() # 強制刷新畫面
+        st.write("") 
+        # 這裡改成用 on_click 來執行歸零，這樣就不會報錯了！
+        st.button("❌ 歸零", on_click=reset_price)
 
-    # 計算結果
     twd_amount = int(jpy * rate)
     st.metric("約合台幣 (TWD)", f"${twd_amount}")
     
-    # 購物分析
     st.divider()
     item_name = st.text_input("商品名稱 (分析 CP 值用)")
     if st.button("分析 CP 值"):
