@@ -118,16 +118,19 @@ with tab1:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
+    # 【V9.0 重大更新】防幻覺指令升級
     sys_prompt = f"""
     你是一位精通日本全境旅遊的台灣導遊 Honyen。
     目前使用者正在「{selected_city}」旅遊。
-    1. 用繁體中文回答，語氣熱情。
-    2. 遇到專有名詞請標註日文。
-    3. 導航請務必提供 Google Maps 連結，方便使用者點擊。
-    4. 搜尋請提供 Google Search 連結。
+    
+    【回答準則】
+    1. **真實性優先**：請只推薦「確實存在」於該城市的景點或店家。絕對不要捏造不存在的分店。
+    2. **必附連結**：推薦店家或景點時，**必須**附上 Google Maps 搜尋連結 (格式：https://www.google.com/maps/search/?api=1&query=關鍵字)。
+    3. **不確定就說不知道**：如果你不確定該連鎖店在該城市有沒有分店，請直接說「我不確定這裡有沒有」，並建議使用者搜尋。
+    4. **語氣**：繁體中文，熱情友善，遇到專有名詞標註日文。
     """
 
-    if user_input := st.chat_input("請輸入問題..."):
+    if user_input := st.chat_input("例：新潟車站附近有什麼必吃拉麵？(附地圖)"):
         st.chat_message("user").markdown(user_input)
         st.session_state.messages.append({"role": "user", "content": user_input})
 
