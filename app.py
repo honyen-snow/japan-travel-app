@@ -27,7 +27,7 @@ if "GOOGLE_API_KEY" in st.secrets:
 else:
     st.error("找不到 API Key")
 
-model = genai.GenerativeModel('gemini-2.5-flash')
+model = genai.GenerativeModel('gemini-2.0-flash')
 
 # --- 3. 定義全日本資料庫 (城市 + 天氣代碼 + 對應的鐵路公司) ---
 # 這是 V7.0 的核心大腦
