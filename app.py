@@ -1,7 +1,6 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
-import datetime
 
 # 1. 網頁設定
 st.set_page_config(page_title="Honyen 的新潟指揮中心", layout="wide", page_icon="🎌")
@@ -14,18 +13,27 @@ else:
 
 model = genai.GenerativeModel('gemini-2.5-flash')
 
-# --- 側邊欄：旅遊情報局 (新功能區) ---
+# --- 側邊欄：旅遊情報局 (已修復天氣與連結) ---
 with st.sidebar:
     st.header("🌦️ 新潟天氣現況")
-    # 這裡用了一個超聰明的開源服務 wttr.in，直接抓取新潟的天氣圖
-    st.image("https://wttr.in/Niigata?m&M&lang=zh-tw&0", caption="資料來源: wttr.in")
+    # 【修復】改用 PNG 格式圖片，確保能穩定顯示
+    # 參數說明: 0=僅顯示當前天氣, m=公制, M=風速m/s, lang=zh-tw=繁體中文
+    st.image("https://wttr.in/Niigata_0_m_M_lang=zh-tw.png", caption="資料來源: wttr.in")
     
     st.divider()
     
     st.header("✈️ 必備傳送門")
     st.link_button("📝 Visit Japan Web (入境填寫)", "https://vjw-lp.digital.go.jp/zh-hant/")
-    st.link_button("🚄 JR 東日本訂票 (Ekinet)", "https://www.eki-net.com/zh-CHT/")
-    st.link_button("🛫 桃園機場航班查詢", "https://www.taoyuan-airport.com/flight_arrival")
+    
+    # 【修復】換成 JR 東日本「外國人專用」預約網站，解決 IP 擋擋問題
+    st.link_button("🚄 JR 東日本訂票 (Global)", "https://www.eki-net.com/jreast-train-reservation/Top/Index")
+    
+    # 【修復】拆分為出發與抵達，方便查詢
+    col_air1, col_air2 = st.columns(2)
+    with col_air1:
+        st.link_button("🛫 桃機出發", "https://www.taoyuan-airport.com/flight_depart")
+    with col_air2:
+        st.link_button("🛬 桃機抵達", "https://www.taoyuan-airport.com/flight_arrival")
 
 # --- 主畫面 ---
 st.title("🎌 Honyen 的全能領隊")
@@ -80,7 +88,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"發生錯誤：{e}")
 
-# === 分頁 2: 翻譯蒟蒻 (維持 V4 架構) ===
+# === 分頁 2: 翻譯蒟蒻 (維持原樣) ===
 with tab2:
     st.header("🗣️ 雙向溝通板")
     trans_mode = st.radio("模式", ["中翻日 (我問店員)", "日翻中 (店員說什麼)"], horizontal=True)
@@ -98,7 +106,7 @@ with tab2:
                     res = model.generate_content(prompt)
                     st.info(res.text)
 
-# === 分頁 3: 敗家計算機 (新功能！) ===
+# === 分頁 3: 敗家計算機 (維持原樣) ===
 with tab3:
     st.header("💰 匯率換算 & 購物分析")
     
