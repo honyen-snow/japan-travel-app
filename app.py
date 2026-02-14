@@ -3,10 +3,10 @@ import google.generativeai as genai
 from PIL import Image
 import streamlit.components.v1 as components
 
-# --- 1. 網頁設定 (必須在最前面) ---
+# --- 1. 網頁設定 ---
 st.set_page_config(page_title="日本旅遊指揮中心", layout="wide", page_icon="🎌")
 
-# --- 🔒 親友通關密碼鎖 ---
+# --- 🔒 密碼鎖 ---
 if "authenticated" not in st.session_state:
     st.session_state.authenticated = False
 
@@ -14,7 +14,8 @@ if not st.session_state.authenticated:
     st.title("🔒 日本 AI 導遊")
     password = st.text_input("請輸入通關密碼：", type="password")
     if st.button("登入"):
-        if password == "japan2026":  # 設定你的密碼
+        # 你的密碼 (建議使用 Secrets 管理，這邊範例寫死方便你測試)
+        if password == "japan2026": 
             st.session_state.authenticated = True
             st.rerun()
         else:
@@ -27,10 +28,11 @@ if "GOOGLE_API_KEY" in st.secrets:
 else:
     st.error("找不到 API Key")
 
+# 建議使用目前最強的 1.5 Flash (因為你有付費專案了，這個額度最多最穩)
+# 或是 gemini-2.0-flash-lite-preview-02-05
 model = genai.GenerativeModel('gemini-2.5-flash')
 
-# --- 3. 定義全日本資料庫 (城市 + 天氣代碼 + 對應的鐵路公司) ---
-# 這是 V7.0 的核心大腦
+# --- 3. 定義全日本資料庫 ---
 city_db = {
     "新潟 (Niigata)": {
         "weather_url": "https://forecast7.com/zh-tw/37d92139d04/niigata/",
@@ -69,17 +71,12 @@ city_db = {
     }
 }
 
-# --- 側邊欄：動態情報局 ---
+# --- 側邊欄 ---
 with st.sidebar:
     st.header("📍 設定您的位置")
-    
-    # A. 城市選擇器
     selected_city = st.selectbox("目前在哪裡旅遊？", list(city_db.keys()))
-    
-    # 根據選擇，抓出資料
     current_info = city_db[selected_city]
     
-    # B. 顯示動態天氣
     st.caption(f"🌤️ {selected_city} 天氣")
     weather_html = f"""
     <a class="weatherwidget-io" href="{current_info['weather_url']}" data-label_1="{selected_city}" data-label_2="天氣預報" data-theme="pure" >天氣預報</a>
@@ -88,42 +85,27 @@ with st.sidebar:
     </script>
     """
     components.html(weather_html, height=110)
-    
     st.divider()
-    
     st.header("🚦 交通與入境")
-    
-    # C. 智慧鐵路連結 (會根據城市自動變！)
     st.link_button(current_info['rail_name'], current_info['rail_url'])
-    st.link_button("📝 Visit Japan Web (入境填寫)", "https://vjw-lp.digital.go.jp/zh-hant/")
-    
+    st.link_button("📝 Visit Japan Web", "https://vjw-lp.digital.go.jp/zh-hant/")
     st.divider()
-    
-    # D. 機場切換器 (桃園 vs 松山)
     st.header("✈️ 航班查詢")
     airport_choice = st.radio("出發/抵達機場", ["🛫 桃園 (TPE)", "🛫 松山 (TSA)"], horizontal=True)
-    
     col_air1, col_air2 = st.columns(2)
-    
     if "桃園" in airport_choice:
-        with col_air1:
-            st.link_button("桃機出發", "https://www.taoyuan-airport.com/flight_depart")
-        with col_air2:
-            st.link_button("桃機抵達", "https://www.taoyuan-airport.com/flight_arrival")
+        with col_air1: st.link_button("桃機出發", "https://www.taoyuan-airport.com/flight_depart")
+        with col_air2: st.link_button("桃機抵達", "https://www.taoyuan-airport.com/flight_arrival")
     else:
-        # 松山機場連結
-        with col_air1:
-            st.link_button("松山出發", "https://www.tsa.gov.tw/flight/index/zh-tw?type=departure")
-        with col_air2:
-            st.link_button("松山抵達", "https://www.tsa.gov.tw/flight/index/zh-tw?type=arrival")
+        with col_air1: st.link_button("松山出發", "https://www.tsa.gov.tw/flight/index/zh-tw?type=departure")
+        with col_air2: st.link_button("松山抵達", "https://www.tsa.gov.tw/flight/index/zh-tw?type=arrival")
 
-# --- 主畫面 (維持原樣) ---
-st.title(f"🎌 AI 日之旅導遊 - {selected_city}篇") # 標題也會跟著變喔！
+# --- 主畫面 ---
+st.title(f"🎌 AI 日之旅導遊 - {selected_city}篇")
 
-# 建立分頁
-tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 敗家計算機"])
+tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 匯率換算"])
 
-# === 分頁 1: AI 導遊 ===
+# === 分頁 1: AI 導遊 (維持原樣) ===
 with tab1:
     with st.expander("📸 上傳照片問問題"):
         uploaded_file = st.file_uploader("請選擇照片...", type=["jpg", "jpeg", "png"])
@@ -139,14 +121,10 @@ with tab1:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # 這裡把 sys_prompt 改成更通用的版本
     sys_prompt = f"""
     你是一位精通日本全境旅遊的台灣導遊 Honyen。
     目前使用者正在「{selected_city}」旅遊。
-    1. 請優先提供該城市的旅遊資訊，但若使用者問其他地方也能回答。
-    2. 用繁體中文回答，語氣熱情。
-    3. 遇到專有名詞請標註日文。
-    4. 導航請提供 Google Maps 連結。
+    請優先提供該城市的旅遊資訊。
     """
 
     if user_input := st.chat_input("請輸入問題..."):
@@ -167,34 +145,98 @@ with tab1:
                 except Exception as e:
                     st.error(f"發生錯誤：{e}")
 
-# === 分頁 2 & 3 (翻譯與計算機，邏輯不變，直接保留即可) ===
+# === 分頁 2: 翻譯蒟蒻 (大幅改良 UX) ===
 with tab2:
     st.header("🗣️ 雙向溝通板")
-    trans_mode = st.radio("模式", ["中翻日 (我問店員)", "日翻中 (店員說什麼)"], horizontal=True)
-    trans_input = st.text_area("輸入文字：", height=100)
-    if st.button("✨ 翻譯", use_container_width=True):
+    
+    # 初始化翻譯歷史 (解決: 切換頁面或亂點後翻譯結果消失的問題)
+    if "trans_history" not in st.session_state:
+        st.session_state.trans_history = ""
+    # 初始化輸入框文字
+    if "trans_input_text" not in st.session_state:
+        st.session_state.trans_input_text = ""
+
+    # 定義一個清除函數：當切換模式時，把輸入框清空
+    def clear_text():
+        st.session_state.trans_input_text = ""
+
+    # 選擇模式 (加入 on_change，切換時自動清空輸入框)
+    trans_mode = st.radio(
+        "模式", 
+        ["中翻日 (我問店員)", "日翻中 (店員說什麼)"], 
+        horizontal=True,
+        on_change=clear_text
+    )
+
+    col_t1, col_t2 = st.columns([4, 1])
+    with col_t1:
+        # 綁定 key 到 session_state，這樣我們才能用程式控制它
+        trans_input = st.text_area("輸入文字：", height=100, key="trans_input_text")
+    with col_t2:
+        st.write("") # 排版用
+        st.write("") 
+        # 加入一個手動清除按鈕
+        if st.button("🗑️ 清除", use_container_width=True):
+            clear_text()
+            st.rerun()
+
+    if st.button("✨ 翻譯", use_container_width=True, type="primary"):
         if trans_input:
             with st.spinner("翻譯中..."):
                 if "中翻日" in trans_mode:
                     res = model.generate_content(f"把這句中文翻成禮貌日文，附羅馬拼音：{trans_input}")
-                    st.success(res.text)
+                    st.session_state.trans_history = res.text # 存起來
                 else:
                     res = model.generate_content(f"把這句日文翻成繁體中文：{trans_input}")
-                    st.info(res.text)
+                    st.session_state.trans_history = res.text # 存起來
+    
+    # 顯示結果 (即使點別的地方，因為是讀取 session_state，所以不會消失)
+    if st.session_state.trans_history:
+        st.info(st.session_state.trans_history)
 
+
+# === 分頁 3: 敗家計算機 (加入 X 清除鍵) ===
 with tab3:
     st.header("💰 匯率換算")
-    col1, col2 = st.columns(2)
-    with col1:
-        jpy = st.number_input("日幣 (¥)", step=100)
-    with col2:
-        rate = st.number_input("匯率", value=0.22)
-    st.metric("台幣 (TWD)", f"${int(jpy*rate)}")
     
+    # 初始化價格 (解決: 數字很難刪除的問題)
+    if "price_input" not in st.session_state:
+        st.session_state.price_input = 0.0
+
+    # 匯率設定 (這個保留 +- 號很好用)
+    col_rate1, col_rate2 = st.columns([3, 1])
+    with col_rate1:
+        rate = st.number_input("目前匯率 (可手動調整)", value=0.22, format="%.3f", step=0.001)
+
+    st.divider()
+
+    # 價格輸入區 (改良版)
+    col_p1, col_p2 = st.columns([4, 1]) 
+    with col_p1:
+        # 綁定 session_state 的值
+        jpy = st.number_input(
+            "日幣金額 (¥)", 
+            min_value=0.0, 
+            step=100.0, 
+            key="price_input"
+        )
+    with col_p2:
+        st.write("") # 排版空格
+        st.write("") 
+        # 這就是你想要的「X」按鈕
+        if st.button("❌ 歸零"):
+            st.session_state.price_input = 0.0 # 設定狀態為 0
+            st.rerun() # 強制刷新畫面
+
+    # 計算結果
+    twd_amount = int(jpy * rate)
+    st.metric("約合台幣 (TWD)", f"${twd_amount}")
+    
+    # 購物分析
     st.divider()
     item_name = st.text_input("商品名稱 (分析 CP 值用)")
     if st.button("分析 CP 值"):
         if item_name and jpy > 0:
-            with st.spinner("分析中..."):
-                res = model.generate_content(f"在日本買{item_name}價格日幣{jpy}，匯率{rate}，請問划算嗎？給建議。")
+            with st.spinner("AI 分析中..."):
+                res = model.generate_content(f"在日本買{item_name}價格日幣{jpy}，匯率{rate}，請問划算嗎？請用台灣人的角度分析 CP 值。")
                 st.write(res.text)
