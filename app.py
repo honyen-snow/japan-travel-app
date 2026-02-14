@@ -4,7 +4,7 @@ from PIL import Image
 import streamlit.components.v1 as components
 
 # --- 1. 網頁設定 (必須在最前面) ---
-st.set_page_config(page_title="Honyen 的日本指揮中心", layout="wide", page_icon="🎌")
+st.set_page_config(page_title="日本旅遊指揮中心", layout="wide", page_icon="🎌")
 
 # --- 🔒 親友通關密碼鎖 ---
 if "authenticated" not in st.session_state:
@@ -118,7 +118,7 @@ with st.sidebar:
             st.link_button("松山抵達", "https://www.tsa.gov.tw/flight/index/zh-tw?type=arrival")
 
 # --- 主畫面 (維持原樣) ---
-st.title(f"🎌 Honyen 的 AI 導遊 - {selected_city}篇") # 標題也會跟著變喔！
+st.title(f"🎌 AI 日之旅導遊 - {selected_city}篇") # 標題也會跟著變喔！
 
 # 建立分頁
 tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 敗家計算機"])
