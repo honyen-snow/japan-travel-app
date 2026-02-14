@@ -1,6 +1,7 @@
 import streamlit as st
 import google.generativeai as genai
 from PIL import Image
+import streamlit.components.v1 as components # 引入新元件，用來嵌入 HTML
 
 # 1. 網頁設定
 st.set_page_config(page_title="Honyen 的新潟指揮中心", layout="wide", page_icon="🎌")
@@ -13,22 +14,27 @@ else:
 
 model = genai.GenerativeModel('gemini-2.5-flash')
 
-# --- 側邊欄：旅遊情報局 (已修復天氣與連結) ---
+# --- 側邊欄：旅遊情報局 (V5.2: 全新天氣小工具) ---
 with st.sidebar:
     st.header("🌦️ 新潟天氣現況")
-    # 【修復】改用 PNG 格式圖片，確保能穩定顯示
-    # 參數說明: 0=僅顯示當前天氣, m=公制, M=風速m/s, lang=zh-tw=繁體中文
-    st.image("https://wttr.in/Niigata_0_m_M_lang=zh-tw.png", caption="資料來源: wttr.in")
+    
+    # 【V5.2 新功能】嵌入 WeatherWidget.io 的 HTML 程式碼
+    # 這會顯示一個漂亮、白底、有圖示和溫度的天氣小卡片
+    weather_widget_html = """
+    <a class="weatherwidget-io" href="https://forecast7.com/zh-tw/37d92139d04/niigata/" data-label_1="NIIGATA" data-label_2="天氣預報" data-theme="pure" >NIIGATA 天氣預報</a>
+    <script>
+    !function(d,s,id){var js,fjs=d.getElementsByTagName(s)[0];if(!d.getElementById(id)){js=d.createElement(s);js.id=id;js.src='https://weatherwidget.io/js/widget.min.js';fjs.parentNode.insertBefore(js,fjs);}}(document,'script','weatherwidget-io-js');
+    </script>
+    """
+    # 使用 components.html 來渲染這段 HTML，設定高度為 110px
+    components.html(weather_widget_html, height=110)
     
     st.divider()
     
     st.header("✈️ 必備傳送門")
     st.link_button("📝 Visit Japan Web (入境填寫)", "https://vjw-lp.digital.go.jp/zh-hant/")
-    
-    # 【修復】換成 JR 東日本「外國人專用」預約網站，解決 IP 擋擋問題
     st.link_button("🚄 JR 東日本訂票 (Global)", "https://www.eki-net.com/jreast-train-reservation/Top/Index")
     
-    # 【修復】拆分為出發與抵達，方便查詢
     col_air1, col_air2 = st.columns(2)
     with col_air1:
         st.link_button("🛫 桃機出發", "https://www.taoyuan-airport.com/flight_depart")
@@ -114,7 +120,6 @@ with tab3:
     with col1:
         jpy_amount = st.number_input("日幣金額 (¥)", min_value=0, step=100)
     with col2:
-        # 這裡預設匯率 0.22，你也可以讓使用者自己改
         rate = st.number_input("目前匯率", value=0.22, format="%.3f")
     
     twd_amount = int(jpy_amount * rate)
@@ -128,7 +133,6 @@ with tab3:
     if st.button("幫我分析 CP 值", type="primary"):
         if item_name and jpy_amount > 0:
             with st.spinner("AI 正在比價分析中..."):
-                # 讓 AI 幫你判斷
                 price_prompt = f"""
                 使用者想在新潟買「{item_name}」，價格是日幣 {jpy_amount} 円。
                 請幫忙分析：
