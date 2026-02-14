@@ -4,7 +4,7 @@ from PIL import Image
 import streamlit.components.v1 as components
 
 # --- 1. 網頁設定 ---
-st.set_page_config(page_title="日本旅遊指揮中心", layout="wide", page_icon="🎌")
+st.set_page_config(page_title="L的日本旅遊指揮中心", layout="wide", page_icon="🎌")
 
 # --- 🔒 密碼鎖 ---
 if "authenticated" not in st.session_state:
@@ -14,7 +14,6 @@ if not st.session_state.authenticated:
     st.title("🔒 日之旅 AI 導遊")
     password = st.text_input("請輸入通關密碼：", type="password")
     if st.button("登入"):
-        # 你的密碼
         if password == "japan2026": 
             st.session_state.authenticated = True
             st.rerun()
@@ -28,7 +27,6 @@ if "GOOGLE_API_KEY" in st.secrets:
 else:
     st.error("找不到 API Key")
 
-# 使用 1.5 Flash (目前額度最穩) 或 2.5-flash
 model = genai.GenerativeModel('gemini-2.5-flash')
 
 # --- 3. 定義全日本資料庫 ---
@@ -102,9 +100,9 @@ with st.sidebar:
 # --- 主畫面 ---
 st.title(f"🎌 AI 日之旅導遊 - {selected_city}篇")
 
-tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 敗家計算機"])
+tab1, tab2, tab3 = st.tabs(["💬 AI 導遊", "🗣️ 翻譯蒟蒻", "💰 匯率換算"])
 
-# === 分頁 1: AI 導遊 (腦袋升級，找回地圖) ===
+# === 分頁 1: AI 導遊 (維持正常) ===
 with tab1:
     with st.expander("📸 上傳照片問問題"):
         uploaded_file = st.file_uploader("請選擇照片...", type=["jpg", "jpeg", "png"])
@@ -120,7 +118,6 @@ with tab1:
         with st.chat_message(message["role"]):
             st.markdown(message["content"])
 
-    # 【重要修正】把「導航請提供 Google Maps 連結」這句話加回來了！
     sys_prompt = f"""
     你是一位精通日本全境旅遊的台灣導遊 Honyen。
     目前使用者正在「{selected_city}」旅遊。
@@ -148,7 +145,7 @@ with tab1:
                 except Exception as e:
                     st.error(f"發生錯誤：{e}")
 
-# === 分頁 2: 翻譯蒟蒻 (移除清除按鈕，保留切換清空) ===
+# === 分頁 2: 翻譯蒟蒻 (維持好用設定) ===
 with tab2:
     st.header("🗣️ 雙向溝通板")
     
@@ -157,11 +154,9 @@ with tab2:
     if "trans_input_text" not in st.session_state:
         st.session_state.trans_input_text = ""
 
-    # 清空函數
     def clear_text():
         st.session_state.trans_input_text = ""
 
-    # 選擇模式 (切換時自動清空)
     trans_mode = st.radio(
         "模式", 
         ["中翻日 (我問店員)", "日翻中 (店員說什麼)"], 
@@ -169,7 +164,6 @@ with tab2:
         on_change=clear_text
     )
 
-    # 輸入框 (移除了右邊的清除按鈕，改為全寬)
     trans_input = st.text_area("輸入文字：", height=100, key="trans_input_text")
 
     if st.button("✨ 翻譯", use_container_width=True, type="primary"):
@@ -182,21 +176,21 @@ with tab2:
                     res = model.generate_content(f"把這句日文翻成繁體中文：{trans_input}")
                     st.session_state.trans_history = res.text 
     
-    # 顯示結果
     if st.session_state.trans_history:
         st.info(st.session_state.trans_history)
 
 
-# === 分頁 3: 敗家計算機 (修正歸零報錯問題) ===
+# === 分頁 3: 敗家計算機 (改良輸入體驗) ===
 with tab3:
     st.header("💰 匯率換算")
     
+    # 這裡改成 None，表示一開始是「空」的，而不是 0.0
     if "price_input" not in st.session_state:
-        st.session_state.price_input = 0.0
+        st.session_state.price_input = None
 
-    # 定義歸零的回調函數 (解決報錯的關鍵！)
+    # 歸零時，也把它變回 None (空)
     def reset_price():
-        st.session_state.price_input = 0.0
+        st.session_state.price_input = None
 
     col_rate1, col_rate2 = st.columns([3, 1])
     with col_rate1:
@@ -206,25 +200,34 @@ with tab3:
 
     col_p1, col_p2 = st.columns([4, 1]) 
     with col_p1:
+        # value=None，並加上 placeholder 提示字
         jpy = st.number_input(
             "日幣金額 (¥)", 
             min_value=0.0, 
             step=100.0, 
-            key="price_input"
+            key="price_input",
+            value=None,  
+            placeholder="請輸入金額..." 
         )
     with col_p2:
         st.write("") 
         st.write("") 
-        # 這裡改成用 on_click 來執行歸零，這樣就不會報錯了！
         st.button("❌ 歸零", on_click=reset_price)
 
-    twd_amount = int(jpy * rate)
+    # 計算邏輯要加一個判斷：如果有輸入(jpy)才計算，不然就顯示 0
+    if jpy:
+        twd_amount = int(jpy * rate)
+    else:
+        twd_amount = 0
+        
     st.metric("約合台幣 (TWD)", f"${twd_amount}")
     
     st.divider()
     item_name = st.text_input("商品名稱 (分析 CP 值用)")
     if st.button("分析 CP 值"):
-        if item_name and jpy > 0:
+        if item_name and jpy: # 這裡也要判斷 jpy 有沒有值
             with st.spinner("AI 分析中..."):
                 res = model.generate_content(f"在日本買{item_name}價格日幣{jpy}，匯率{rate}，請問划算嗎？請用台灣人的角度分析 CP 值。")
                 st.write(res.text)
+        else:
+            st.warning("請先輸入金額喔！")
